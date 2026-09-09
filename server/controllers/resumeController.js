@@ -1,4 +1,3 @@
-import fs from 'fs';
 import path from 'path';
 import Resume from '../models/Resume.js';
 import User from '../models/User.js';
@@ -23,35 +22,36 @@ const normalizeList = (value) =>
   (Array.isArray(value) ? value : []).map(toText).filter(Boolean);
 
 /**
- * Extract plain text from a resume file (PDF or DOCX).
- * pdf-parse v2 uses class-based API: new PDFParse({verbosity:0}).parse(buffer)
- * mammoth works the same across versions.
+ * Extract plain text from a file buffer.
+ * Uses memoryStorage — no disk access needed (Vercel-compatible).
  */
-const extractTextFromFile = async (filePath) => {
-  const ext = path.extname(filePath).toLowerCase();
+const extractTextFromBuffer = async (buffer, mimeType, originalName) => {
+  const ext = path.extname(originalName).toLowerCase();
 
-  if (ext === '.pdf') {
+  if (ext === '.pdf' || mimeType === 'application/pdf') {
     // Use internal lib path to bypass pdf-parse v1's ESM test-file bug
     const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
-    const buffer = fs.readFileSync(filePath);
     const data = await pdfParse(buffer);
     return data.text || '';
   }
 
-  if (ext === '.docx') {
+  if (
+    ext === '.docx' ||
+    mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ) {
     const mammoth = (await import('mammoth')).default;
-    const result = await mammoth.extractRawText({ path: filePath });
+    const result = await mammoth.extractRawText({ buffer });
     return result.value || '';
   }
 
-  if (ext === '.doc') {
+  if (ext === '.doc' || mimeType === 'application/msword') {
     // .doc is legacy binary format — strip non-printable chars as best-effort
-    const raw = fs.readFileSync(filePath, 'latin1');
+    const raw = buffer.toString('latin1');
     return raw.replace(/[^\x20-\x7E\n\r\t]/g, ' ').replace(/\s{3,}/g, ' ');
   }
 
   // Plain text fallback
-  return fs.readFileSync(filePath, 'utf8');
+  return buffer.toString('utf8');
 };
 
 export const uploadResume = async (req, res) => {
@@ -60,19 +60,18 @@ export const uploadResume = async (req, res) => {
       return res.status(400).json({ message: 'Please upload a valid resume file' });
     }
 
+    // Delete existing resume record (no disk file to clean up)
     const existing = await Resume.findOne({ userId: req.user._id });
     if (existing) {
-      if (fs.existsSync(existing.filePath)) {
-        fs.unlinkSync(existing.filePath);
-      }
       await existing.deleteOne();
     }
 
-    const filePath = req.file.path;
     const resume = await Resume.create({
       userId: req.user._id,
       fileName: req.file.originalname,
-      filePath,
+      filePath: '',
+      fileData: req.file.buffer,
+      mimeType: req.file.mimetype,
       extractedSkills: [],
       education: [],
       experience: [],
@@ -84,7 +83,9 @@ export const uploadResume = async (req, res) => {
     user.resume = resume._id;
     await user.save();
 
-    res.status(201).json({ message: 'Resume uploaded successfully', resume });
+    // Return resume without the binary fileData to keep response lean
+    const { fileData: _fd, ...resumeObj } = resume.toObject();
+    res.status(201).json({ message: 'Resume uploaded successfully', resume: resumeObj });
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ message: error.message || 'Resume upload failed' });
@@ -93,7 +94,7 @@ export const uploadResume = async (req, res) => {
 
 export const getResume = async (req, res) => {
   try {
-    const resume = await Resume.findOne({ userId: req.user._id });
+    const resume = await Resume.findOne({ userId: req.user._id }).select('-fileData');
     if (!resume) {
       return res.status(404).json({ message: 'No resume found' });
     }
@@ -110,16 +111,16 @@ export const analyzeResume = async (req, res) => {
       return res.status(404).json({ message: 'Upload a resume before analysis' });
     }
 
-    if (!fs.existsSync(resume.filePath)) {
+    if (!resume.fileData || resume.fileData.length === 0) {
       return res.status(404).json({
-        message: 'Resume file not found on disk. Please re-upload your resume.',
+        message: 'Resume file data not found. Please re-upload your resume.',
       });
     }
 
-    // Extract text from the uploaded file
+    // Extract text from the stored buffer
     let text = '';
     try {
-      text = await extractTextFromFile(resume.filePath);
+      text = await extractTextFromBuffer(resume.fileData, resume.mimeType, resume.fileName);
     } catch (parseErr) {
       console.error('File parse error:', parseErr);
       return res.status(422).json({
@@ -159,7 +160,8 @@ export const analyzeResume = async (req, res) => {
     user.experience = experienceList;
     await user.save();
 
-    res.json({ message: 'Resume analyzed successfully', analysis, resume });
+    const { fileData: _fd, ...resumeObj } = resume.toObject();
+    res.json({ message: 'Resume analyzed successfully', analysis, resume: resumeObj });
   } catch (error) {
     console.error('Resume analysis error:', error);
     res.status(500).json({ message: error.message || 'Resume analysis failed' });
@@ -173,11 +175,8 @@ export const deleteResume = async (req, res) => {
       return res.status(404).json({ message: 'No resume found' });
     }
 
-    if (fs.existsSync(resume.filePath)) {
-      fs.unlinkSync(resume.filePath);
-    }
-
     await resume.deleteOne();
+
     const user = await User.findById(req.user._id);
     user.resume = null;
     user.skills = [];
