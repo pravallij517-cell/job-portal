@@ -1,0 +1,209 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #2b211b;
+  background: #f6f3ed;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #f6f3ed;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+}
+
+.dark body {
+  background: #020817;
+  color: #f8fafc;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Playfair Display', Georgia, serif;
+  letter-spacing: 0;
+}
+
+nav,
+button,
+input,
+textarea,
+select,
+label {
+  letter-spacing: 0.01em;
+}
+
+/* One restrained surface language keeps all page templates visually related. */
+[class*="bg-gradient"] {
+  background-image: none !important;
+  background-color: #3b2a20 !important;
+}
+
+[class*="radial-gradient"] {
+  background-image: none !important;
+  background-color: #f1e9dc !important;
+}
+
+[class*="text-indigo-"],
+[class*="text-cyan-"],
+[class*="text-violet-"],
+[class*="text-blue-"] {
+  color: #79552f !important;
+}
+
+[class*="text-cyan-100"],
+[class*="text-cyan-200"],
+[class*="text-brand-100"],
+[class*="text-brand-200"] {
+  color: #f3e5b8 !important;
+}
+
+[class*="bg-indigo-"],
+[class*="bg-cyan-"],
+[class*="bg-violet-"],
+[class*="bg-blue-"] {
+  background-color: #f5f0e8 !important;
+}
+
+[class*="border-indigo-"],
+[class*="border-cyan-"],
+[class*="border-violet-"],
+[class*="border-blue-"] {
+  border-color: #d8c5aa !important;
+}
+
+[class*="text-emerald-"] {
+  color: #6e6a3b !important;
+}
+
+[class*="bg-emerald-"] {
+  background-color: #edf0df !important;
+}
+
+[class*="rounded-3xl"],
+[class*="rounded-[32px]"] {
+  border-radius: 10px !important;
+}
+
+[class*="rounded-2xl"] {
+  border-radius: 8px !important;
+}
+
+[class*="rounded-xl"] {
+  border-radius: 6px !important;
+}
+
+[class*="shadow-soft"],
+[class*="shadow-gold"] {
+  box-shadow: 0 8px 24px rgba(69, 48, 32, 0.10) !important;
+}
+
+input,
+textarea,
+select {
+  border-color: #d9cbb8 !important;
+  background-color: #fffdf9 !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #b28a45 !important;
+  box-shadow: 0 0 0 3px rgba(178, 138, 69, 0.16) !important;
+}
+
+a,
+button {
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.glass-nav {
+  animation: nav-arrive 700ms cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.glass-nav__shine {
+  position: absolute;
+  inset: 0 auto 0 -35%;
+  width: 24%;
+  transform: skewX(-20deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .45), transparent);
+  animation: nav-shine 8s ease-in-out 1.2s infinite;
+  pointer-events: none;
+}
+
+.nav-logo {
+  animation: logo-float 4s ease-in-out 1s infinite;
+}
+
+.nav-link::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  transform: scaleX(0);
+  transform-origin: center;
+  background: #b28a45;
+  content: '';
+  transition: transform 200ms ease;
+}
+
+.nav-link:hover::after,
+.nav-link.is-active::after {
+  transform: scaleX(1);
+}
+
+@keyframes nav-arrive {
+  from { opacity: 0; transform: translateY(-12px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes nav-shine {
+  0%, 72%, 100% { left: -35%; opacity: 0; }
+  78% { opacity: 1; }
+  88% { left: 120%; opacity: 0; }
+}
+
+@keyframes logo-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
